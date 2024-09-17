@@ -13,7 +13,7 @@ export default {
       file: 'dist/bundle.min.js',
       format: 'es',
       name: 'version',
-      plugins: [terser()],
+      plugins: [terser({ compress:true, mangle:true })],
     },
   ],
   plugins: [nodeResolve()],

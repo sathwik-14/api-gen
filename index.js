@@ -4,7 +4,7 @@ import { appTemplate, passport, aws, twilio } from './templates/index.js';
 import { scaffold } from './generate.js';
 // uncomment below lines to take manual user inputs
 // import {
-// projectPrompts
+//   projectPrompts,
 // , schemaPrompts
 // } from './prompt.js';
 import { prisma, sequelize, mongoose, swagger } from './plugins/index.js';
@@ -21,6 +21,8 @@ import {
 } from './utils/index.js';
 import sampledata from './sampledata.js';
 import chalk from 'chalk';
+import path from 'node:path';
+import fs from 'node:fs';
 
 let userModel;
 let models = [];
@@ -67,7 +69,11 @@ const generateProjectStructure = async (input) => {
         // routes\n\n
         module.exports=router`,
       },
-      { path: '.env', content: 'DATABASE_URL=""' },
+      {
+        path: '.env',
+        content:
+          'DATABASE_URL="postgresql://<user>:<password>@<host>:5432/<database name>"',
+      },
       { path: '.gitignore', content: 'node_modules\n.env\n' },
       {
         path: 'README.md',
@@ -183,7 +189,7 @@ const CheckProjectExist = (answers) => {
         console.log('Config file is empty or missing name property');
       }
       if (answers.name === config.name) {
-        console.log('Project already created');
+        console.log(chalk.green`Project config file found`);
         return;
       }
     }
@@ -220,13 +226,39 @@ const getRoleInput = async () => {
   }
 };
 
+// Function to get the value associated with a specific flag
+const getFlagValue = (args, flag) => {
+  const index = args.indexOf(flag);
+  if (index !== -1 && args[index + 1]) {
+    return args[index + 1];
+  }
+  return null;
+};
+
 const main = async () => {
   try {
-    // uncomment below line and import line on top if you want to provide custom input
-    // const answers = await projectPrompts();
-    // checkout sampledata.js for preset inputs - faster development
-    const answers = sampledata.p1;
-    // uncomment to auth feature
+    let answers;
+    // eslint-disable-next-line no-undef
+    const args = process.argv.slice(2);
+    const configFilePath = getFlagValue(args, '-c');
+    if (configFilePath) {
+      const absolutePath = path.resolve(configFilePath);
+      // Read the JSON config file
+      try {
+        const config = fs.readFileSync(absolutePath, 'utf8');
+        answers = JSON.parse(config);
+      } catch {
+        console.error(
+          chalk.red`Invalid file name or content - ${configFilePath}`,
+        );
+      }
+    } else {
+      // uncomment below line and import line on top if you want to provide custom input
+      // answers = await projectPrompts();
+      // checkout sampledata.js for preset inputs - faster development
+      answers = sampledata.p1;
+      // uncomment to auth feature
+    }
     let { authentication, roles, orm, db } = answers;
     CheckProjectExist(answers);
     // uncomment to auth feature
@@ -248,12 +280,12 @@ const main = async () => {
     }
     await generateProjectStructure(answers);
     saveConfig(answers);
-    console.log('Started generating scaffold...');
+    console.log(chalk.green`Started generating scaffold...`);
     await runORMSetup(orm, db);
     await scaffold(answers);
     if (userModel) models.push({ name: 'user', model: userModel });
     await installDependencies(answers);
-    console.log('Project setup successful');
+    console.log(chalk.green`Project setup successful`);
   } catch (error) {
     console.log(chalk.bgRed`Error`, error);
   }

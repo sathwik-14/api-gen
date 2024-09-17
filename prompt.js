@@ -1,5 +1,13 @@
-import { orms, tools } from './constants.js';
+import { databases, orms, tools } from './constants.js';
 import { prompt, saveConfig } from './utils/index.js';
+
+const getFields = (schemaData, refTable) => {
+  const fields = schemaData[refTable].map((field) => field.name);
+  if (!schemaData[refTable].find((item) => item.name == 'id')) {
+    fields.push('id', 'created_at', 'updated_at');
+  }
+  return fields;
+};
 
 const projectPrompts = async () => {
   return await prompt([
@@ -7,7 +15,7 @@ const projectPrompts = async () => {
       type: 'input',
       name: 'name',
       message: 'What is your project name?',
-      validate: function (value) {
+      validate: (value) => {
         if (value.length) {
           return true;
         } else {
@@ -24,19 +32,13 @@ const projectPrompts = async () => {
       type: 'list',
       name: 'db',
       message: 'Which database would you like to use?',
-      choices: ['postgresql', 'mysql'],
+      choices: Array.from(databases.keys()),
     },
     {
       type: 'list',
       name: 'orm',
       message: 'Which ORM would you like to choose?',
-      choices: function (answers) {
-        if (answers.db === 'mongoDB') {
-          return ['prisma', 'mongoose'];
-        } else {
-          return ['sequelize'];
-        }
-      },
+      choices: (ans) => databases.get(ans.db).supportedORM,
     },
     {
       type: 'confirm',
@@ -62,13 +64,13 @@ const projectPrompts = async () => {
     //   message: 'Do you want authentication for your project?(passport-jwt)',
     //   default: true,
     // },
-    {
-      type: 'confirm',
-      name: 'roles',
-      message: 'Do you want role based authentication?',
-      default: true,
-      when: (answers) => answers.authentication,
-    },
+    // {
+    //   type: 'confirm',
+    //   name: 'roles',
+    //   message: 'Do you want role based authentication?',
+    //   default: true,
+    //   when: (answers) => answers.authentication,
+    // },
   ]);
 };
 
@@ -77,13 +79,12 @@ const schemaPrompts = async (input, name = '') => {
     let tables = [];
     let schemaData = {};
     let mappedTypes = orms[input.orm].types;
-
     const schemaQuestions = [
       {
         type: 'input',
         name: 'name',
         message: 'Enter the name of the attribute:',
-        validate: function (value) {
+        validate: (value) => {
           return /^[a-zA-Z_]\w*$/.test(value)
             ? true
             : 'Please enter a valid attribute name (alphanumeric characters and underscores only, and must start with a letter or underscore).';
@@ -99,8 +100,7 @@ const schemaPrompts = async (input, name = '') => {
         type: 'input',
         name: 'size',
         message: 'Enter the size (if applicable):',
-        when: (answers) =>
-          ['string', 'binary'].includes(answers.type.toLowerCase()),
+        when: (answers) => orms[input.orm].allowSizeInput(answers.type),
         default: '',
       },
       {
@@ -157,9 +157,9 @@ const schemaPrompts = async (input, name = '') => {
         name: 'refField',
         message: 'Enter the referenced field:',
         when: (answers) => answers.foreignKey,
-        choices: function (answers) {
+        choices: (answers) => {
           const refTable = answers.refTable;
-          const fields = schemaData[refTable].map((field) => field.name);
+          const fields = getFields(schemaData, refTable);
           return fields;
         },
       },
@@ -201,22 +201,20 @@ const schemaPrompts = async (input, name = '') => {
         tables.push(ans.table_name);
         while (true) {
           const model = await prompt(schemaQuestions);
+          schemaData[ans.table_name].push(model);
           if (!model.add_another) {
-            schemaData[ans.table_name].push(model);
             break;
           }
-          schemaData[ans.table_name].push(model);
         }
       }
     } else {
       schemaData[name] = [];
       while (true) {
         const userModel = await prompt(schemaQuestions);
+        schemaData[name].push(userModel);
         if (!userModel.add_another) {
-          schemaData[name].push(userModel);
           break;
         }
-        schemaData[name].push(userModel);
       }
       saveConfig({ schema: schemaData });
       return schemaData;

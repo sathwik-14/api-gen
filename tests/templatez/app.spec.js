@@ -39,7 +39,7 @@ describe('Handlebars App Template', () => {
     expect(renderedTemplate).toContain('app.use(helmet())');
     expect(renderedTemplate).toContain('app.use(compression())');
     expect(renderedTemplate).toContain('app.use(passport.initialize())');
-    expect(renderedTemplate).toContain("app.get('/',(req,res)=>{");
+    expect(renderedTemplate).toContain("app.get('/',(req, res)=>{");
     expect(renderedTemplate).toContain(
       'res.status(200).send("Welcome ! to MyApp")',
     );

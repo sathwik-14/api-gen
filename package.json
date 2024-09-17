@@ -4,7 +4,8 @@
   "description": "A a powerful tool designed to streamline the process of building APIs for Express.js applications",
   "main": "index.js",
   "bin": {
-    "quik-g-p": "./index.js"
+    "quik-g-p": "./index.js",
+    "quik-g-m": "./generate.js"
   },
   "scripts": {
     "start": "node index.js",

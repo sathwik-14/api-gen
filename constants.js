@@ -1,5 +1,11 @@
 import { prisma, sequelize, mongoose, typeorm } from './plugins/index.js';
 
+const databases = new Map([
+  ['postgresql', { supportedORM: ['sequelize'] }],
+  // 'mysql',
+  // 'mongoDB'
+]);
+
 const orms = {
   prisma: {
     id: 1,
@@ -18,8 +24,8 @@ const orms = {
     ],
     getType: (input) => prisma.type(input),
   },
-  id: 2,
   sequelize: {
+    id: 2,
     name: 'sequelize',
     types: [
       'STRING',
@@ -46,6 +52,18 @@ const orms = {
       'DECIMAL',
       'DECIMAL(10, 2)',
     ],
+    allowSizeInput: (type) =>
+      [
+        'STRING',
+        'CHAR',
+        'INTEGER',
+        'FLOAT',
+        'BIGINT',
+        'DOUBLE',
+        'REAL',
+        'DECIMAL',
+        'DECIMAL(10, 2)',
+      ].includes(type),
     getType: (input) => sequelize.type(input),
   },
   mongoose: {
@@ -123,4 +141,4 @@ const tools = [
   { name: 'sendgrid' },
 ];
 
-export { orms, genericTypes, tools };
+export { orms, genericTypes, tools, databases };

@@ -33,7 +33,7 @@ const serializeUserContent = (userModel) => {
   );
 
   let content = `const serializeUser = (user) => {
-    return {      
+    return {
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
       id: user.id,`;
@@ -165,7 +165,7 @@ const userLogin = async (user, res) => {
   }
 };
 
-${input?.roles?.length ? 'const checkRole = roles => (req,res,next) => !roles.includes(req.user.role) ? res.status(401).json("unauthorized"):next();' : ''}
+${input?.roles?.length ? 'const checkRole = roles => (req, res, next) => !roles.includes(req.user.role) ? res.status(401).json("unauthorized"):next();' : ''}
 
 ${serializeUserContent(userModel)}
 

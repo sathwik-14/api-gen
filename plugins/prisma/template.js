@@ -7,7 +7,7 @@ export default {
     module.exports = prisma;
     `,
   createPrismaContent: (modelName) => `
-    async function create${capitalize(modelName)}(req, res) {
+    const create${capitalize(modelName)} = async (req, res) => {
         try {
           req.body = req.body || {}
             const new${capitalize(
@@ -22,28 +22,28 @@ export default {
     }
     `,
   getAllPrismaContent: (modelName) => `
-      async function getAll${capitalize(modelName)}(req, res) {
+      const getAll${capitalize(modelName)} = async (req, res) => {
           try {
               let { page = 1, limit = 10, sortBy, sortOrder } = req.query;
-      
+
               page = parseInt(page);
               limit = parseInt(limit);
-      
+
               if (isNaN(page) || page < 1) {
                   page = 1;
               }
               if (isNaN(limit) || limit < 1 || limit > 100) {
                   limit = 10;
               }
-      
+
               const options = {
                   take: limit,  // Limit the number of results per page
                   skip: (page - 1) * limit,  // Skip results for pagination
                   orderBy: sortBy ? { [sortBy]: sortOrder || 'asc' } : undefined, // Sort results
               };
-      
+
               const ${modelName.toLowerCase()} = await prisma.${modelName}.findMany(options);
-      
+
               res.json(${modelName.toLowerCase()});
           } catch (error) {
               console.error(error);
@@ -52,7 +52,7 @@ export default {
       }
       `,
   getByIdPrismaContent: (modelName) => `
-    async function get${capitalize(modelName)}ById(req, res) {
+    const get${capitalize(modelName)}ById = async (req, res) => {
     try {
         const ${modelName.toLowerCase()} = await prisma.${modelName}.findFirst({
             where: {
@@ -72,7 +72,7 @@ export default {
     }
       `,
   updatePrismaContent: (modelName) => `
-    async function update${capitalize(modelName)}ById(req, res) {
+    const update${capitalize(modelName)}ById = async (req, res) => {
     try {
         const updated${capitalize(
           modelName,
@@ -95,7 +95,7 @@ export default {
     }
       `,
   deletePrismaContent: (modelName) => `
-    async function delete${capitalize(modelName)}ById(req, res) {
+    const delete${capitalize(modelName)}ById = async (req, res) => {
     try {
         const deleted${capitalize(
           modelName,

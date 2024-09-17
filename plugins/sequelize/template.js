@@ -1,7 +1,7 @@
 import { capitalize } from '../../utils/index.js';
 import Handlebars from 'handlebars';
 
-Handlebars.registerHelper('equals', function (variable, string, options) {
+Handlebars.registerHelper('equals', (variable, string, options) => {
   if (variable === string) {
     return options.fn(this);
   } else {
@@ -9,7 +9,7 @@ Handlebars.registerHelper('equals', function (variable, string, options) {
   }
 });
 
-Handlebars.registerHelper('notequals', function (variable, string, options) {
+Handlebars.registerHelper('notequals', (variable, string, options) => {
   if (variable != string) {
     return options.fn(this);
   } else {
@@ -19,7 +19,7 @@ Handlebars.registerHelper('notequals', function (variable, string, options) {
 
 export default {
   create: (modelName) => `
-    async function create${capitalize(modelName)}(req, res) {
+    const create${capitalize(modelName)} = async (req, res) => {
       try {
         const new${capitalize(modelName)} = await db.${capitalize(
           modelName,
@@ -33,30 +33,30 @@ export default {
     `,
 
   getAll: (modelName) => `
-    async function getAll${capitalize(modelName)}(req, res) {
+    const getAll${capitalize(modelName)} = async (req, res) => {
       try {
         let { page = 1, limit = 10, sortBy, sortOrder } = req.query;
-    
+
         page = parseInt(page);
         limit = parseInt(limit);
-    
+
         if (isNaN(page) || page < 1) {
           page = 1;
         }
         if (isNaN(limit) || limit < 1 || limit > 100) {
           limit = 10;
         }
-    
+
         const options = {
           offset: (page - 1) * limit,  // Offset for pagination
           limit: limit,  // Limit the number of results per page
           order: sortBy ? [[sortBy, sortOrder || 'ASC']] : [] // Sorting order
         };
-    
+
         const ${modelName}List = await db.${capitalize(
           modelName,
         )}.findAll(options);
-    
+
         // Respond with the retrieved data
         res.status(200).json(${modelName}List);
       } catch (error) {
@@ -67,7 +67,7 @@ export default {
     `,
 
   getById: (modelName) => `
-    async function get${capitalize(modelName)}ById(req, res) {
+    const get${capitalize(modelName)}ById = async (req, res) => {
       try {
         const { id } = req.params;
         const ${modelName} = await db.${capitalize(modelName)}.findByPk(id);
@@ -85,7 +85,7 @@ export default {
     `,
 
   update: (modelName) => `
-    async function update${capitalize(modelName)}ById(req, res) {
+    const update${capitalize(modelName)}ById = async (req, res) => {
       try {
         const { id } = req.params;
         const [updatedCount, newValue] = await db.${capitalize(
@@ -106,7 +106,7 @@ export default {
     }`,
 
   delete: (modelName) => `
-    async function delete${capitalize(modelName)}ById(req, res) {
+    const delete${capitalize(modelName)}ById = async (req, res) => {
       try {
         const { id } = req.params;
         const deletedCount = await db.${capitalize(
@@ -129,9 +129,9 @@ export default {
   init: `
     const { Sequelize } = require("sequelize");
     require("dotenv").config();
-    
+
     {{#notequals db "mysql"}}
-    const dbUri = process.env['DATABASE_URL']; 
+    const dbUri = process.env['DATABASE_URL'];
     {{/notequals}}
     const sequelize = new Sequelize(
     {{#equals db "mysql"}}
@@ -145,7 +145,7 @@ export default {
     dbUri,{logging:false}
     {{/equals}}
     );
-    
+
     const testDbConnection = async () => {
       try {
         await sequelize.authenticate();
