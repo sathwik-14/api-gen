@@ -67,11 +67,16 @@ const generateRoutes = async (routeName, roles, model) => {
 
 const scaffold = async (input) => {
   try {
+    let schemaData;
     loadState(input);
-    // uncomment the below code to enter schema manually and uncommer import also for schemaPrompts
-    // const schemaData = await schemaPrompts(input);
-    // checkout sampledata.js for predefined schemas - faster development
-    const schemaData = sampledata.tasks;
+    if (input.schema) {
+      schemaData = input.schema;
+    } else {
+      // uncomment the below code to enter schema manually and uncommer import also for schemaPrompts
+      // schemaData = await schemaPrompts(input);
+      // checkout sampledata.js for predefined schemas - faster development
+      schemaData = sampledata.blogs;
+    }
     await joi.setup();
     if (Object.keys(schemaData).length) {
       for (const [key, value] of Object.entries(schemaData)) {

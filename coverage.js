@@ -29,7 +29,7 @@ server.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
 });
 
-function getContentType(filePath) {
+const getContentType = (filePath) => {
   const extname = path.extname(filePath);
   switch (extname) {
     case '.html':
@@ -41,4 +41,4 @@ function getContentType(filePath) {
     default:
       return 'text/plain';
   }
-}
+};

@@ -30,9 +30,9 @@ Handlebars.registerHelper('logMiddleware', () => {
 Handlebars.registerHelper('authRoutes', (authentication) => {
   if (authentication) {
     return `
-app.post("/auth/register", async (req,res) => await userRegister(req.body,res));
-app.post("/auth/login", async (req,res) => await userLogin(req.body,res));
-app.get("/auth/profile", userAuth, (req,res) => res.status(200).json({ user: serializeUser(req.user) }));
+app.post("/auth/register", async (req, res) => await userRegister(req.body,res));
+app.post("/auth/login", async (req, res) => await userLogin(req.body,res));
+app.get("/auth/profile", userAuth, (req, res) => res.status(200).json({ user: serializeUser(req.user) }));
     `;
   }
   return '';
@@ -110,7 +110,7 @@ app.use(passport.initialize());
 require("./middlewares/passport")(passport);
 {{/if}}
 
-app.get('/',(req,res)=>{
+app.get('/',(req, res)=>{
   res.status(200).send("Welcome ! to {{input.name}}")
 })
 
