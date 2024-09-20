@@ -6,6 +6,24 @@ import {
   capitalize,
 } from '../../utils/index.js';
 
+const getExportedNames = (content) => {
+  try {
+    const exportRegex = /module\.exports\s*=\s*{([^}]*)}/;
+    const match = content.match(exportRegex);
+    if (match && match[1]) {
+      const namesString = match[1].trim();
+      return namesString
+        .split(',')
+        .map((name) => name.trim())
+        .filter((name) => name !== '')
+        .join(',');
+    }
+    return [].join(',');
+  } catch {
+    return [].join(',');
+  }
+};
+
 const updateIndex = async (
   modelsDirectory,
   modelName,
@@ -14,24 +32,27 @@ const updateIndex = async (
   // model,
 ) => {
   const indexFilePath = `${modelsDirectory}/index.js`;
-  let indexContent = `
-// imports
+  let indexContent = `// imports
 
 // associations
-  
+
 // exports
 module.exports = {
-  }`;
+}`;
+
   if (exists(indexFilePath)) {
-    indexContent = read(indexFilePath);
+    let tempContent = read(indexFilePath);
+    if (tempContent.length) {
+      indexContent = tempContent;
+    }
   }
 
   const importLine = `const ${capitalizedServiceName} = require('./${modelName.toLowerCase()}');`;
   const exportLine = `${capitalizedServiceName},`;
-  // const association = generateAssociation(modelName, model);
 
+  // const association = generateAssociation(modelName, model);
   const importsCommentIndex = indexContent.indexOf('// imports');
-  if (importsCommentIndex !== -1) {
+  if (importsCommentIndex != -1 && !indexContent.includes(importLine)) {
     const nextLineIndex = indexContent.indexOf(
       '\n',
       importsCommentIndex + '// imports'.length,
@@ -41,15 +62,15 @@ module.exports = {
       indexContent.slice(0, nextLineIndex) +
       importLines +
       indexContent.slice(nextLineIndex);
-    console.log(
-      `${modelName} model appended to the models/index file under imports.`,
-    );
-  } else {
-    console.log('Missing comment for imports. Unable to append.');
   }
 
   const moduleExportsIndex = indexContent.indexOf('module.exports = {');
-  if (moduleExportsIndex !== -1) {
+  const exports = getExportedNames(indexContent);
+
+  if (
+    moduleExportsIndex !== -1 &&
+    !exports.includes(exportLine.replace(',', ''))
+  ) {
     const nextLineIndex = indexContent.indexOf(
       '\n',
       moduleExportsIndex + 'module.exports = {'.length,
@@ -59,13 +80,6 @@ module.exports = {
       indexContent.slice(0, nextLineIndex) +
       exportLines +
       indexContent.slice(nextLineIndex);
-    console.log(
-      `${modelName} model appended to the models/index file under module.exports.`,
-    );
-  } else {
-    console.log(
-      'Unable to find module.exports = { ... } block. Cannot append exports.',
-    );
   }
 
   // const associationCommentIndex = indexContent.indexOf('// associations');
@@ -92,7 +106,7 @@ module.exports = {
   //   console.log('Missing comment for associations. Unable to append.');
   // }
 
-  await write(indexFilePath, indexContent);
+  await write(indexFilePath, indexContent, { force: true });
 };
 
 // uncomment for association definition
@@ -157,7 +171,7 @@ const formatDefaultValue = (type, value) => {
 };
 
 const generateModel = async (modelName, model) => {
-  const modelsDirectory = './models';
+  const modelsDirectory = 'models';
   const capitalizedServiceName = capitalize(modelName);
   if (!model.length) return;
   const customFields = model

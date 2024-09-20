@@ -1,10 +1,40 @@
 import { prisma, sequelize, mongoose, typeorm } from './plugins/index.js';
 
+// const drivers = {
+//   postgresql: 'pg',
+//   mysql: 'mysql2',
+//   mariadb: 'mariadb',
+//   sqlite: 'sqlite3',
+//   mssql: 'tedious',
+//   oracledb: 'oracledb',
+// };
+
+const packages = [
+  'express',
+  'cors',
+  'dotenv',
+  'helmet',
+  'winston',
+  'compression',
+  'joi',
+];
+
 const databases = new Map([
-  ['postgresql', { supportedORM: ['sequelize'] }],
-  // 'mysql',
-  // 'mongoDB'
+  ['postgresql', { supportedORM: ['sequelize'], driver: 'pg' }],
+  // ['mysql', { supportedORM: ['sequelize', driver: 'mysql2' ]}],
+  // '['mariadb', , { supportedORM: ['sequelize', driver: 'mariadb' ]}]'
 ]);
+
+const folders = [
+  'controllers',
+  'models',
+  'routes',
+  'middlewares',
+  'utils',
+  'config',
+  'validation',
+  'validation/schemas',
+];
 
 const orms = {
   prisma: {
@@ -22,6 +52,7 @@ const orms = {
       'Bytes',
       'Enum',
     ],
+    setup: prisma.setup,
     getType: (input) => prisma.type(input),
   },
   sequelize: {
@@ -52,6 +83,7 @@ const orms = {
       'DECIMAL',
       'DECIMAL(10, 2)',
     ],
+    setup: sequelize.setup,
     allowSizeInput: (type) =>
       [
         'STRING',
@@ -86,6 +118,7 @@ const orms = {
       'Schema.Types.Decimal128',
       'Schema.Types.Map',
     ],
+    setup: mongoose.setup,
     getType: (input) => mongoose.type(input),
   },
   typeORM: {
@@ -132,13 +165,22 @@ const genericTypes = [
   'decimal',
 ];
 
-const tools = [
-  { name: 'none' },
-  { name: 's3' },
-  { name: 'sns' },
-  { name: 'twilio' },
-  { name: 'msg91' },
-  { name: 'sendgrid' },
-];
+const tools = {
+  // { name: 'none' },
+  s3: {
+    name: 's3',
+    env: `AWS_SECRET_ACCESS_KEY=< secret access key >\nAWS_ACCESS_KEY=< aws access key id >\nS3_BUCKET_NAME=< aws s3 bucket name >`,
+  },
+  sns: {
+    name: 'sns',
+    env: `AWS_SECRET_ACCESS_KEY=< secret access key >\nAWS_ACCESS_KEY=< aws access key id >`,
+  },
+  twilio: {
+    name: 'twilio',
+    env: `TWILIO_ACCOUNT_SID=< twilio account sid >\nTWILIO_AUTH_TOKEN=< twiliio auth token >`,
+  },
+  msg91: { name: 'msg91', env: `MSG_AUTH_KEY=< msg auth key >` },
+  sendgrid: { name: 'sendgrid', env: `SENDGRID_API_KEY=< sendgrid api key >` },
+};
 
-export { orms, genericTypes, tools, databases };
+export { packages, folders, orms, genericTypes, tools, databases };

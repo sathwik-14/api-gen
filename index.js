@@ -1,13 +1,20 @@
 #!/usr/bin/env node
 
-import { appTemplate, passport, aws, twilio } from './templates/index.js';
+import {
+  appTemplate,
+  passport,
+  aws,
+  twilio,
+  sendgrid,
+  msg91,
+} from './templates/index.js';
 import { scaffold } from './generate.js';
 // uncomment below lines to take manual user inputs
 // import {
 //   projectPrompts,
 // , schemaPrompts
 // } from './prompt.js';
-import { prisma, sequelize, mongoose, swagger } from './plugins/index.js';
+import { prisma, sequelize, swagger } from './plugins/index.js';
 import {
   compile,
   createDirectory,
@@ -16,6 +23,7 @@ import {
   install,
   saveConfig,
   prompt,
+  append,
   // uncomment to work on RBAC
   // prompt,
 } from './utils/index.js';
@@ -23,21 +31,26 @@ import sampledata from './sampledata.js';
 import chalk from 'chalk';
 import path from 'node:path';
 import fs from 'node:fs';
+import { databases, folders, orms, packages, tools } from './constants.js';
 
 let userModel;
 let models = [];
 
 const runORMSetup = async (orm, db) => {
-  console.log(`Setting up ${orm}`);
-  const ormSetupFunctions = {
-    prisma: prisma.setup,
-    sequelize: sequelize.setup,
-    mongoose: mongoose.setup,
-  };
-  if (!ormSetupFunctions[orm]) {
+  if (!orms[orm].setup) {
     throw new Error(`Unsupported ORM: ${orm}`);
   }
-  await ormSetupFunctions[orm](db);
+  await orms[orm].setup(db);
+};
+
+const preFillEnv = (input) => {
+  input.authentication && append('.env', 'SECRET="mysecret"\nSALT_ROUNDS=10');
+  if (input.tools.length) {
+    input.tools.forEach(async (tool) => {
+      const envContent = tools[tool].env || '';
+      await append('.env', envContent);
+    });
+  }
 };
 
 const generateProjectStructure = async (input) => {
@@ -49,16 +62,6 @@ const generateProjectStructure = async (input) => {
       error_handling = true,
       api_documentation = true,
     } = input;
-    const folders = [
-      'controllers',
-      'models',
-      'routes',
-      'middlewares',
-      'utils',
-      'config',
-      'validation',
-      'validation/schemas',
-    ];
     const files = [
       { path: 'app.js', content: compile(appTemplate)({ input }) },
       {
@@ -71,8 +74,7 @@ const generateProjectStructure = async (input) => {
       },
       {
         path: '.env',
-        content:
-          'DATABASE_URL="postgresql://<user>:<password>@<host>:5432/<database name>"',
+        content: `PORT=3000\nDATABASE_URL="${input.db}://<user>:<password>@<host>:5432/<database name>"`,
       },
       { path: '.gitignore', content: 'node_modules\n.env\n' },
       {
@@ -81,38 +83,33 @@ const generateProjectStructure = async (input) => {
       },
     ];
 
-    if (tools.length) {
-      const toolFiles = {
-        s3: [
-          { path: 'config/aws.js', content: aws.s3.config() },
-          { path: 'utils/s3.js', content: aws.s3.utils() },
-        ],
-        sns: [{ path: 'utils/sns.js', content: aws.sns() }],
-        twilio: [{ path: 'utils/twilio.js', content: twilio() }],
-      };
+    const toolFiles = {
+      s3: [
+        { path: 'config/aws.js', content: aws.s3.config() },
+        { path: 'utils/s3.js', content: aws.s3.utils() },
+      ],
+      sns: [{ path: 'utils/sns.js', content: aws.sns() }],
+      twilio: [{ path: 'utils/twilio.js', content: twilio() }],
+      msg91: [{ path: 'utils/msg91.js', content: msg91() }],
+      sendgrid: [{ path: 'utils/sendgrid.js', content: sendgrid() }],
+    };
+
+    tools.length &&
       tools.forEach((tool) => {
         files.push(...(toolFiles[tool] || []));
       });
-    }
 
-    if (authentication) {
+    authentication &&
       files.push(
         { path: 'middlewares/passport.js', content: passport.middleware },
         { path: 'utils/auth.js', content: passport.util(input, userModel) },
       );
-    }
 
-    if (logging) {
-      files.push({ path: 'access.log', content: '' });
-    }
+    logging && files.push({ path: 'access.log', content: '' });
 
-    if (error_handling) {
-      files.push({ path: 'error.log', content: '' });
-    }
+    error_handling && files.push({ path: 'error.log', content: '' });
 
-    if (api_documentation) {
-      swagger.setup(input);
-    }
+    api_documentation && swagger.setup(input);
 
     folders.forEach(createDirectory);
 
@@ -121,21 +118,15 @@ const generateProjectStructure = async (input) => {
         ? await write(file.path, file.content, { format: false })
         : await write(file.path, file.content);
     });
+
+    preFillEnv(input);
   } catch (err) {
     console.error(chalk.bgRed`Unable to create project structure`, err);
   }
 };
 
 const getDbDriver = (db) => {
-  const drivers = {
-    postgresql: 'pg',
-    mysql: 'mysql2',
-    mariadb: 'mariadb',
-    sqlite: 'sqlite3',
-    mssql: 'tedious',
-    oracledb: 'oracledb',
-  };
-  return drivers[db.toLowerCase()];
+  return databases.get(db).driver;
 };
 
 const installDependencies = async (answers) => {
@@ -147,23 +138,11 @@ const installDependencies = async (answers) => {
     tools,
     db,
   } = answers;
-  console.log('Installing dependencies');
-  const packages = [
-    'express',
-    'cors',
-    'dotenv',
-    'helmet',
-    'winston',
-    'compression',
-    'joi',
-  ];
-  if (api_documentation) packages.push('swagger-jsdoc', 'swagger-ui-express');
-  if (error_handling) packages.push('morgan');
-  if (production) packages.push('winston', 'pm2', 'express-rate-limit');
-  if (authentication) {
-    console.log('Setting up  passport,passport-jwt');
+  api_documentation && packages.push('swagger-jsdoc', 'swagger-ui-express');
+  error_handling && packages.push('morgan');
+  production && packages.push('winston', 'pm2', 'express-rate-limit');
+  authentication &&
     packages.push('passport', 'passport-jwt', 'jsonwebtoken', 'bcrypt');
-  }
   if (tools.length) {
     for (const item of tools) {
       switch (item) {
@@ -235,6 +214,17 @@ const getFlagValue = (args, flag) => {
   return null;
 };
 
+const handleAuthentication = async (answer) => {
+  console.log('Let us create User model with required fields');
+  //uncomment the below line to take manual schema input
+  //userModel = await schemaPrompts(answers, 'user');
+  userModel = sampledata.auth.noRoles.user;
+  const name = 'user';
+  const orm = answer.orm;
+  orm == 'prisma' && (await prisma.model(name, userModel, answer.db));
+  orm == 'sequelize' && (await sequelize.model(name, userModel));
+};
+
 const main = async () => {
   try {
     let answers;
@@ -262,30 +252,15 @@ const main = async () => {
     let { authentication, roles, orm, db } = answers;
     CheckProjectExist(answers);
     // uncomment to auth feature
-    if (authentication) {
-      if (roles) answers.roles = await getRoleInput();
-      console.log('Let us create User model with required fields');
-      //uncomment the below line to take manual schema input
-      //userModel = await schemaPrompts(answers, 'user');
-      userModel = sampledata.auth.noRoles.user;
-      const name = 'user';
-      switch (orm) {
-        case 'prisma':
-          prisma.model(name, userModel, db);
-          break;
-        case 'sequelize':
-          await sequelize.model(name, userModel);
-          break;
-      }
-    }
+    authentication && (await handleAuthentication(answers));
+    answers.roles = (roles && (await getRoleInput())) || [];
     await generateProjectStructure(answers);
     saveConfig(answers);
-    console.log(chalk.green`Started generating scaffold...`);
     await runORMSetup(orm, db);
     await scaffold(answers);
-    if (userModel) models.push({ name: 'user', model: userModel });
+    userModel && models.push({ name: 'user', model: userModel });
     await installDependencies(answers);
-    console.log(chalk.green`Project setup successful`);
+    console.log(chalk.bgGreenBright`Project setup successful`);
   } catch (error) {
     console.log(chalk.bgRed`Error`, error);
   }

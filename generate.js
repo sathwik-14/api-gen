@@ -31,11 +31,10 @@ const authMiddleware = (roles) => {
 };
 
 const updateRouteInMain = async (routeName, roles = []) => {
-  let importContent = `const ${routeName}Routes = require("./${routeName}");`;
-
+  const importContent = `const ${routeName}Routes = require("./${routeName}");`;
   const routeContent = `router.use("/${routeName}",${authMiddleware(roles)}${routeName}Routes);`;
-  let mainFileContent = read('routes/index.js');
-  let lines = mainFileContent.split('\n');
+  const mainFileContent = read('routes/index.js');
+  const lines = mainFileContent.split('\n');
   const importRoutesIndex = lines.findIndex((line) =>
     line.includes('// import routes'),
   );
@@ -97,7 +96,6 @@ const scaffold = async (input) => {
         }
         await joi.schema(modelName, model);
         await generateRoutes(modelName, [], model);
-        console.log('Generated routes and controllers for ', modelName);
       }
     }
     saveConfig({ schema: schemaData });

@@ -5,7 +5,7 @@ const apiKey = process.env.SENDGRID_API_KEY;
 
 sgMail.setApiKey(apiKey);
 
-// Send email using SendGrid
+// Send email
 const sendEmail = async (emailData) => {
   try {
     const response = await sgMail.send(emailData);
@@ -18,5 +18,4 @@ const sendEmail = async (emailData) => {
 module.exports = {
   sendEmail
 };
-
 `;
