@@ -26,7 +26,7 @@ export default {
         )}.create(req.body);
         res.status(201).json(new${capitalize(modelName)});
       } catch (error) {
-        console.error(error.errors[0]);
+        console.error(error);
         res.status(500).json({ error: 'Internal server error' });
       }
     }

@@ -7,7 +7,7 @@ const s3 = new AWS.S3({
     accessKeyId: process.env.AWS_ACCESS_KEY,
     secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
     });
-    
+
     const BUCKET = process.env.S3_BUCKET_NAME;
 
 module.exports = {
@@ -20,17 +20,17 @@ module.exports = {
     const path = require('node:path');
 
     const uploadFile = (filePath, keyName) => {
-  
+
         return new Promise((resolve, reject) => {
         try {
         var fs = require('fs');
-        const file = fs.readFileSync(filePath,"utf-8");        
+        const file = fs.readFileSync(filePath,"utf-8");
         const uploadParams = {
         Bucket: BUCKET,
         Key: keyName,
         Body: file
         };
-        
+
         s3.upload(uploadParams, function (err, data) {
         if (err) {
         return reject(err);
@@ -48,17 +48,17 @@ module.exports = {
         const putObject = (key, fileBuffer) => {
             return new Promise((resolve, reject) => {
             try {
-                        
+
             const params = {
             Bucket: BUCKET,
             Key: key,
             Body: fileBuffer
             };
-            
+
             s3.putObject(params, function (err, data) {
             if (err)
             return reject(err);
-            
+
             data.url =\`https://\${BUCKET}.\${dosCredentials.region}.digitaloceanspaces.com/\${key}\`
 
             ;
@@ -81,9 +81,9 @@ module.exports = {
                 Expires : 30 * 60,
                 ContentType : mime.lookup(path.basename(filename)),
                 };
-                
+
                 const signedUrl = s3.getSignedUrl('putObject', params);
-                
+
                 if (signedUrl) {
                 return resolve(signedUrl);
                 } else {
@@ -99,15 +99,15 @@ module.exports = {
                     return new Promise((resolve, reject) => {
                     try {
                     const fileName = path.basename(key);
-                    
+
                     var params = {
                     Bucket: BUCKET,
                     Key: key,
                     Expires: 30 * 60
                     };
-                    
+
                     const signedUrl = s3.getSignedUrl('getObject', params);
-                    
+
                     if (signedUrl) {
                     return resolve({
                     signedUrl,
@@ -129,7 +129,7 @@ module.exports = {
                         Bucket: BUCKET,
                         Key: key
                         };
-                        
+
                         s3.deleteObject(params, function (err, data) {
                         if (err)
                         return reject(err);
@@ -153,25 +153,33 @@ module.exports = {
   sns: () => `
 const AWS = require("aws-sdk");
 
+AWS.config.update({
+    region: 'ap-south-1',
+    credentials: {
+        accessKeyId: process.env.AWS_ACCESS_KEY,
+        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY
+    }
+});
+
 const sendMessageToSnsTopic = async (message, topicArn, region = "ap-south-1") => {
     try {
       // Set region
       AWS.config.update({ region });
-  
+
       // Create publish parameters
       const params = {
         Message: message, // required
         TopicArn: topicArn,
       };
-  
+
       // Create promise and SNS service object
-      const sns = new AWS.SNS({ apiVersion: "2010-03-31" });
+      const sns = new AWS.SNS(); // mention desired api version
       const data = await sns.publish(params).promise();
-  
+
       // Log success message
       console.log(\`Message \${params.Message} sent to the topic \${params.TopicArn}\`);
       console.log("MessageID is " + data.MessageId);
-  
+
       return data; // Return the result (optional)
     } catch (error) {
       // Handle errors
